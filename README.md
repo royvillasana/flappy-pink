@@ -13,15 +13,15 @@ Un juego web estilo Flappy Bird con temática de Barbie, completamente responsiv
 ### 🎯 **Mecánicas de Juego**
 - ❤️ **Sistema de vida**: 5 corazones, pierdes 0.5 por colisión
 - 🏆 **Victoria**: Alcanza 50 puntos pasando tubos
-- ⭐ **Bonificaciones**: Recolecta estrellas para puntos extra
+- ⭐ **Bonificaciones**: Recolecta estrellas doradas para puntos extra
 - 🎵 **Audio**: Sonidos diferenciados para acciones
 - 🌈 **Efectos visuales**: Partículas y animaciones
 
 ### 🎨 **Estilo Barbie**
 - 💖 Paleta de colores rosa completa
-- 🏰 Fondo animado del castillo de ensueño
-- ✨ Efectos de brillos y partículas
-- 🎀 Interfaz amigable y adorable
+- 🏰 Fondo animado del castillo de ensueño (opacidad sutil)
+- ✨ Estrellas doradas brillantes con efectos sparkle
+- 🎀 Interfaz limpia y elegante
 
 ## 🎮 Cómo Jugar
 
@@ -31,7 +31,7 @@ Un juego web estilo Flappy Bird con temática de Barbie, completamente responsiv
 
 ### Objetivo:
 1. 🚀 Vuela entre los tubos rosas
-2. ⭐ Recolecta estrellas para puntos bonus  
+2. ⭐ Recolecta estrellas doradas para puntos bonus  
 3. ❤️ Cuida tus 5 corazones de vida
 4. 🏆 ¡Llega a 50 puntos para ganar!
 
@@ -39,7 +39,7 @@ Un juego web estilo Flappy Bird con temática de Barbie, completamente responsiv
 
 ```bash
 # Clona el repositorio
-git clone https://github.com/TU_USUARIO/flappy-pink-barbie.git
+git clone https://github.com/royvillasana/flappy-pink.git
 
 # Abre el juego
 open index.html
@@ -49,13 +49,13 @@ open index.html
 ## 📁 Estructura del Proyecto
 
 ```
-flappy-pink-barbie/
+flappy-pink/
 ├── index.html          # Juego completo (HTML + CSS + JS)
 ├── assets/             # Recursos multimedia
-│   ├── background.png  # Fondo del castillo
+│   ├── background1.png # Fondo del castillo
 │   ├── hero.png       # Personaje principal
 │   ├── heart.png      # Corazones de vida
-│   ├── star.png       # Estrellas recolectables
+│   ├── star.png       # Imagen original de estrella
 │   ├── sparkle.png    # Efectos de partículas
 │   ├── logo.png       # Logo del juego
 │   ├── favicon.png    # Icono del navegador
@@ -89,10 +89,9 @@ Ajusta parámetros en el JavaScript:
 ## 🌐 Hosting
 
 ### GitHub Pages:
-1. Sube el proyecto a GitHub
-2. Ve a Settings > Pages
-3. Selecciona "Deploy from branch: main"
-4. ¡Listo! Tu juego estará en: `https://tu-usuario.github.io/flappy-pink-barbie`
+1. Ve a Settings > Pages en tu repositorio
+2. Selecciona "Deploy from branch: main"
+3. ¡Listo! Tu juego estará en: `https://royvillasana.github.io/flappy-pink`
 
 ### Netlify/Vercel:
 - Conecta tu repositorio de GitHub
@@ -130,3 +129,5 @@ Este proyecto es de código abierto. Siéntete libre de usar, modificar y distri
 ---
 
 💖 **¡Disfruta jugando Flappy Pink!** ✨
+
+## 🎮 [**JUGAR AHORA**](https://royvillasana.github.io/flappy-pink) 🎮
