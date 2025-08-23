@@ -276,6 +276,7 @@
     let lives = 5.0;   // 5 hearts, loses 0.5 per collision
     let gameWon = false;
     let gameOver = false;
+    let gameStarted = false; // Game hasn't started until first input
 
     function reset(){
       pipes = [];
@@ -286,6 +287,7 @@
       lives = 5.0;
       gameWon = false;
       gameOver = false;
+      gameStarted = false; // Reset game started state
       initHero();
       hero.vy = 0;
       message(" ¡Toca o presiona una tecla para volar! ¡Tú puedes! ");
@@ -294,6 +296,13 @@
 
     function flap(){ 
       if (gameOver || gameWon) return;
+      
+      // Start the game on first input
+      if (!gameStarted) {
+        gameStarted = true;
+        message(" ¡Adelante! ¡Tú puedes hacerlo! ");
+      }
+      
       hero.vy = hero.jump; 
     }
 
@@ -478,6 +487,13 @@
     function physics(){
       if (gameOver || gameWon) return;
 
+      // Only apply physics if game has started
+      if (!gameStarted) {
+        // Keep hero floating in place until first input
+        hero.vy = 0;
+        return;
+      }
+
       // hero
       hero.vy += hero.g;
       hero.y += hero.vy;
@@ -498,8 +514,8 @@
       }
       if (hero.y < hero.r){ hero.y = hero.r; hero.vy = 0; }
 
-      // spawn
-      if (t%95===0) spawnPipe();
+      // spawn pipes only after game starts
+      if (gameStarted && t%95===0) spawnPipe();
 
       // move pipes
       for(const p of pipes){ p.x -= 2.4; }
@@ -637,7 +653,10 @@
     }
 
     function frame(){
-      t++;
+      // Only increment time when game has started
+      if (gameStarted) {
+        t++;
+      }
       physics();
 
       ctx.clearRect(0,0,W,H);
