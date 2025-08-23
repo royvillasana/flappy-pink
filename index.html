@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0"/>
+  <title>Flappy Pink </title>
+  <link rel="icon" type="image/png" href="assets/favicon.png"/>
+  <style>
+    :root{
+      --rose:#e60073;
+      --pink1:#ffb6e9;
+      --pink2:#ffc1f3;
+      --pink3:#ffe0f7;
+      --pink4:#ff99cc;
+      --pink5:#ff66b2;
+      --pink6:#ff80bf;
+      --pink7:#ff4da6;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: ui-rounded, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(to bottom, var(--pink1), var(--pink2), var(--pink3));
+      user-select:none;
+    }
+    .wrap{
+      position:relative;
+      width: 100%;
+      max-width: 420px;
+      height: 100vh;
+      max-height: 680px;
+      border-radius: 0;
+      box-shadow: 0 10px 30px rgba(230,0,115,0.25);
+      overflow:hidden;
+      border: none;
+      background:#fff0f6;
+      margin: 0 auto;
+    }
+    
+    @media (min-width: 500px) {
+      .wrap {
+        width: 420px;
+        height: 680px;
+        border-radius: 24px;
+        border: 4px solid var(--pink2);
+      }
+    }
+    header{
+      position:absolute;
+      top:4px;
+      left:50%;
+      transform:translateX(-50%);
+      z-index:3;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 8px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 999px;
+      backdrop-filter: blur(4px);
+      font-weight: 700;
+      color: var(--rose);
+      font-size: 14px;
+    }
+    header img{height:24px}
+    #msg{
+      position:absolute; top:120px; left:50%;
+      transform:translateX(-50%);
+      z-index:3;
+      padding:6px 10px;
+      background: rgba(255,255,255,0.65);
+      border-radius:12px;
+      color:var(--rose);
+      font-weight:700;
+      text-align:center;
+      max-width: 90%;
+      box-shadow:0 6px 16px rgba(255, 77, 166, .18);
+      font-size: 13px;
+    }
+    canvas{ 
+      display:block; 
+      width:100%; 
+      height:100%; 
+      touch-action: none; /* Prevent default touch behaviors */
+    }
+    .hud{
+      position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+      display:flex; gap:10px; z-index:3;
+    }
+    .btn{
+      padding:10px 14px; border-radius:999px; border:none;
+      background: linear-gradient(180deg, var(--pink5), var(--pink6));
+      color:white; font-weight:800; cursor:pointer; box-shadow: 0 6px 14px rgba(255,102,178,.35);
+    }
+    .btn:active{ transform: translateY(1px); }
+    .note{
+      position:absolute; bottom:46px; left:50%; transform:translateX(-50%);
+      font-size:12px; color:#a80056; opacity:.8; text-align:center; width:90%;
+    }
+    #hearts{
+      position:absolute; top:32px; left:50%; transform:translateX(-50%);
+      z-index:3; display:flex; gap:2px;
+      background: rgba(255,255,255,0.5);
+      padding: 4px 8px;
+      border-radius: 999px;
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <img src="assets/logo.png" alt="logo"/>
+      <span>Flappy Pink</span>
+    </header>
+    <div id="hearts"></div>
+    <div id="msg">Toca o presiona una tecla para volar. ¡Tú puedes!</div>
+    <canvas id="game"></canvas>
+    <div class="hud">
+      <button class="btn" id="btnRestart">Reiniciar</button>
+      <button class="btn" id="btnEasy">Modo normal</button>
+    </div>
+    <div class="note">Tienes 5 corazones. ¡Llega a 50 puntos para ganar! </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    
+    let W, H;
+    
+    function resizeCanvas() {
+      const container = document.querySelector('.wrap');
+      const rect = container.getBoundingClientRect();
+      
+      // Set canvas size to match container
+      W = rect.width;
+      H = rect.height;
+      
+      // Set canvas resolution
+      canvas.width = W;
+      canvas.height = H;
+      
+      // Ensure crisp rendering
+      ctx.imageSmoothingEnabled = false;
+      
+      // Reinitialize hero position and size if game has started
+      if (hero.x > 0) {
+        initHero();
+      }
+    }
+    
+    // Initial resize
+    resizeCanvas();
+    
+    // Resize on window resize
+    window.addEventListener('resize', resizeCanvas);
+
+    // Load assets
+    const bgImg = new Image(); bgImg.src = 'assets/background.png';
+    const heroImg = new Image(); heroImg.src = 'assets/hero.png';
+    const heartImg = new Image(); heartImg.src = 'assets/heart.png';
+    const starImg = new Image(); starImg.src = 'assets/star.png';
+    const sparkleImg = new Image(); sparkleImg.src = 'assets/sparkle.png';
+    
+
+    // Audio
+    const starSfx = new Audio('assets/star.wav');
+    const victorySfx = new Audio('assets/victory.wav');
+    const hurtSfx = new Audio('assets/star.wav');
+    
+    // Create audio context for pitch shifting hurt sound
+    let audioContext;
+    let hurtBuffer;
+    
+    function playStar(){ try { starSfx.currentTime = 0; starSfx.play(); } catch(e){} }
+    function playVictory(){ try { victorySfx.currentTime = 0; victorySfx.play(); } catch(e){} }
+    function playHurt(){ 
+      try { 
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        // Play a lower pitched, shorter version of the star sound
+        const source = audioContext.createBufferSource();
+        const gainNode = audioContext.createGain();
+        
+        // If we have the buffer, use it with pitch shift
+        if (hurtBuffer) {
+          source.buffer = hurtBuffer;
+          source.playbackRate.value = 0.6; // Lower pitch
+          gainNode.gain.value = 0.2; // Lower volume
+          
+          source.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          source.start(0, 0, 0.2); // Play only first 0.2 seconds
+        } else {
+          // Fallback to simple audio with different settings
+          hurtSfx.currentTime = 0;
+          hurtSfx.volume = 0.2;
+          hurtSfx.playbackRate = 0.7;
+          hurtSfx.play();
+        }
+      } catch(e){
+        // Fallback
+        try {
+          hurtSfx.currentTime = 0;
+          hurtSfx.volume = 0.2;
+          hurtSfx.play();
+        } catch(e2){}
+      }
+    }
+    
+    function unlockAudio(){ 
+      try { 
+        starSfx.play(); starSfx.pause();
+        // Initialize audio context
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      } catch(e){} 
+    }
+
+    const msg = document.getElementById('msg');
+    const heartsDiv = document.getElementById('hearts');
+
+    // Helpers to confirm assets are ready
+    function isReady(img){ return img && img.complete && img.naturalWidth > 0; }
+    
+    function updateHeartsDisplay(){
+      const fullHearts = Math.floor(lives);
+      const hasHalf = (lives % 1) === 0.5;
+      let heartsHTML = '';
+      
+      for (let i = 0; i < fullHearts; i++) {
+        heartsHTML += '❤️';
+      }
+      
+      if (hasHalf && fullHearts < 5) {
+        heartsHTML += '💔';
+      }
+      
+      heartsDiv.innerHTML = heartsHTML;
+    }
+    const btnRestart = document.getElementById('btnRestart');
+    const btnEasy = document.getElementById('btnEasy');
+
+    let easyMode = false; // Disabled by default with new lives system
+    btnEasy.onclick = () => { easyMode = !easyMode; btnEasy.textContent = easyMode ? "Modo amable" : "Modo normal"; message(" Modo " + (easyMode ? "amable" : "normal")); };
+
+    function message(t){ msg.textContent = t; }
+
+    // Hero with responsive positioning and size
+    function initHero() {
+      hero.x = W * 0.167; // 70/420 ≈ 0.167 - proportional x position
+      hero.y = H * 0.294; // 200/680 ≈ 0.294 - proportional y position  
+      hero.r = Math.min(W, H) * 0.057; // 24/420 ≈ 0.057 - proportional radius
+    }
+    
+    const hero = { x: 0, y: 0, r: 0, vy: 0, g: 0.48, jump: -7.2 };
+    let pipes = []; // columns with a gap
+    let stars = []; // collectibles
+    let t = 0;
+    let score = 0;     // passing pipes
+    let starPoints = 0; // collected stars
+    let best = 0;
+    let lives = 5.0;   // 5 hearts, loses 0.5 per collision
+    let gameWon = false;
+    let gameOver = false;
+
+    function reset(){
+      pipes = [];
+      stars = [];
+      t = 0;
+      score = 0;
+      starPoints = 0;
+      lives = 5.0;
+      gameWon = false;
+      gameOver = false;
+      initHero();
+      hero.vy = 0;
+      message(" ¡Toca o presiona una tecla para volar! ¡Tú puedes! ");
+      updateHeartsDisplay();
+    }
+
+    function flap(){ 
+      if (gameOver || gameWon) return;
+      hero.vy = hero.jump; 
+    }
+
+    // Enhanced input handling for mobile and desktop
+    function handleInput(e) {
+      e.preventDefault();
+      unlockAudio();
+      flap();
+    }
+    
+    // Touch events for mobile
+    canvas.addEventListener('touchstart', handleInput, { passive: false });
+    canvas.addEventListener('touchend', e => e.preventDefault(), { passive: false });
+    canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    
+    // Mouse events for desktop
+    canvas.addEventListener('mousedown', handleInput);
+    canvas.addEventListener('click', handleInput);
+    
+    // Keyboard events
+    window.addEventListener('keydown', e => {
+      if([' ','ArrowUp'].includes(e.key)){ 
+        handleInput(e);
+      }
+    });
+    
+    // Prevent context menu on long press
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    btnRestart.onclick = reset;
+
+    function spawnPipe(){
+      const gap = H * 0.235; // 160/680 ≈ 0.235 - proportional gap
+      const minTop = H * 0.118; // 80/680 ≈ 0.118
+      const maxTop = H - minTop - H * 0.324 - gap; // Proportional boundaries
+      const top = minTop + Math.random() * maxTop;
+      const width = W * 0.152; // 64/420 ≈ 0.152 - proportional width
+      pipes.push({ x: W+10, w: width, top: top, bottom: top+gap, passed:false });
+      // sometimes spawn a star in the gap
+      if (Math.random() < 0.7){
+        stars.push({ x: W+10 + width/2, y: top + gap/2, r: Math.min(W, H) * 0.024, taken:false });
+      }
+    }
+
+    let backgroundX = 0;
+    
+    function drawBackground(){
+      if (!isReady(bgImg)) return;
+      
+      const scaleX = W/bgImg.width;
+      const scaleY = H/bgImg.height;
+      
+      // Use the larger scale to ensure the image covers the entire canvas
+      const scale = Math.max(scaleX, scaleY);
+      const scaledWidth = bgImg.width * scale;
+      const scaledHeight = bgImg.height * scale;
+      
+      ctx.save();
+      ctx.globalAlpha = 0.95;
+      
+      // Smooth horizontal scrolling
+      backgroundX -= 0.5; // Slow scroll speed
+      
+      // Draw background twice for seamless scrolling
+      ctx.drawImage(bgImg, backgroundX, 0, scaledWidth, scaledHeight);
+      ctx.drawImage(bgImg, backgroundX + scaledWidth, 0, scaledWidth, scaledHeight);
+      
+      // Reset position when first image is completely off-screen
+      if (backgroundX <= -scaledWidth) {
+        backgroundX = 0;
+      }
+      
+      ctx.restore();
+    }
+
+    function drawHero(){
+      if (!isReady(heroImg)) return;
+      const size = hero.r * 2.5; // Proportional size based on collision radius
+      ctx.drawImage(heroImg, hero.x - size/2, hero.y - size/2, size, size);
+    }
+
+    function drawPipeColumn(p){
+      ctx.save();
+      const shades = ['#ff80bf', '#ff4da6'];
+      ctx.fillStyle = shades[ (Math.floor(p.x/40)%2+2)%2 ];
+      // top rect
+      roundRect(ctx, p.x, 0, p.w, p.top, 20);
+      ctx.fill();
+      // bottom rect
+      roundRect(ctx, p.x, p.bottom, p.w, H - p.bottom, 20);
+      ctx.fill();
+      // stamp some hearts
+      if (isReady(heartImg)){
+        for(let y=8; y<p.top-24; y+=24){
+          ctx.drawImage(heartImg, p.x+8, y, 24, 24);
+        }
+        for(let y=p.bottom+8; y<H-24; y+=24){
+          ctx.drawImage(heartImg, p.x+8, y, 24, 24);
+        }
+      }
+      ctx.restore();
+    }
+
+    function roundRect(ctx, x,y,w,h,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);
+      ctx.arcTo(x+w,y,x+w,y+h,r);
+      ctx.arcTo(x+w,y+h,x,y+h,r);
+      ctx.arcTo(x,y+h,x,y,r);
+      ctx.arcTo(x,y,x+w,y,r);
+      ctx.closePath();
+    }
+
+    function drawStar(s){
+      if (!isReady(starImg)) return;
+      const size = s.r * 2.5; // Proportional size based on radius
+      ctx.drawImage(starImg, s.x - size/2, s.y - size/2, size, size);
+    }
+
+    function physics(){
+      if (gameOver || gameWon) return;
+
+      // hero
+      hero.vy += hero.g;
+      hero.y += hero.vy;
+      
+      // Ground and ceiling collision
+      if (hero.y > H-hero.r){ 
+        hero.y = H-hero.r; 
+        hero.vy = 0;
+        lives -= 0.5;
+        updateHeartsDisplay();
+        playHurt();
+        if (lives <= 0) {
+          gameOver = true;
+          message("¡Se acabaron los corazones! Juego terminado");
+          return;
+        }
+        message(`¡Cuidado! Te quedan ${Math.floor(lives)} corazones`);
+      }
+      if (hero.y < hero.r){ hero.y = hero.r; hero.vy = 0; }
+
+      // spawn
+      if (t%95===0) spawnPipe();
+
+      // move pipes
+      for(const p of pipes){ p.x -= 2.4; }
+      if (pipes.length && pipes[0].x + pipes[0].w < -10) pipes.shift();
+
+      // move stars
+      for(const s of stars){ s.x -= 2.4; }
+      if (stars.length && stars[0].x < -20) stars.shift();
+
+      // collisions & scoring
+      for(const p of pipes){
+        if (!p.passed && p.x + p.w < hero.x){ 
+          p.passed = true; 
+          score++; 
+          best = Math.max(best, score); 
+          
+          // Check for victory condition at 50 points
+          if (score >= 50) {
+            gameWon = true;
+            playVictory();
+            message("🌈 ¡GANASTE! ¡50 PUNTOS! ¡ERES INCREÍBLE! 🌈");
+            // Add rainbow effect
+            for (let i=0;i<20;i++){
+              particles.push({
+                x: Math.random()*W, 
+                y: Math.random()*H, 
+                vx:(Math.random()-0.5)*4, 
+                vy:-Math.random()*3-2, 
+                life:80, 
+                color: `hsl(${Math.random()*360}, 100%, 60%)`
+              });
+            }
+            return;
+          }
+          
+          message(` ¡Genial! Puntos: ${score}/50 - Estrellas: ${starPoints}`); 
+        }
+        const withinX = hero.x > p.x-hero.r+4 && hero.x < p.x + p.w + hero.r-4;
+        const hitsTop = hero.y-hero.r+4 < p.top && withinX;
+        const hitsBottom = hero.y+hero.r-4 > p.bottom && withinX;
+        if ((hitsTop || hitsBottom) && !p.hit){
+          p.hit = true; // Prevent multiple hits on same pipe
+          lives -= 0.5;
+          updateHeartsDisplay();
+          playHurt();
+          hero.vy = -6; // Small bounce
+          
+          if (lives <= 0) {
+            gameOver = true;
+            message("¡Se acabaron los corazones! Juego terminado");
+            return;
+          } else {
+            message(`¡Auch! Te quedan ${Math.floor(lives)} corazones`);
+          }
+        }
+      }
+
+      // Star collection - more generous collision area
+      for(const s of stars){
+        if (!s.taken && Math.hypot(hero.x - s.x, hero.y - s.y) < hero.r + 12){
+          s.taken = true;
+        }
+      }
+      let kept = [];
+      for(const s of stars){
+        if (s.taken){
+          starPoints += 1;
+          playStar();
+          
+          // Victory condition moved to score section
+          
+          message(` ¡Brillas! Estrellas: ${starPoints}`);
+          for (let i=0;i<5;i++){
+            particles.push({x:s.x, y:s.y, vx:(Math.random()-0.5)*2, vy:-Math.random()*2-1, life:40});
+          }
+        } else kept.push(s);
+      }
+      stars = kept;
+    }
+
+    function gentleBump(){
+      hero.vy = -6;
+      message(" ¡No pasa nada! ¡Inténtalo otra vez, tú puedes!");
+    }
+
+    // particles
+    let particles = [];
+    function drawParticles(){
+      ctx.save();
+      particles = particles.filter(p => --p.life > 0);
+      for(const p of particles){
+        p.x += p.vx; p.y += p.vy;
+        ctx.globalAlpha = Math.max(0, p.life/(p.color ? 80 : 40));
+        
+        if (p.color) {
+          // Rainbow particles for victory
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x-5, p.y-5, 10, 10);
+        } else if (isReady(sparkleImg)) {
+          // Regular sparkle particles
+          ctx.drawImage(sparkleImg, p.x-10, p.y-10, 20, 20);
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawHUD(){
+      ctx.save();
+      ctx.fillStyle = '#e60073';
+      const baseFontSize = Math.min(W, H) * 0.048; // Responsive font size
+      const smallFontSize = Math.min(W, H) * 0.038;
+      const topPosition = H * 0.25; // 170/680 ≈ 0.25
+      const leftMargin = W * 0.033; // 14/420 ≈ 0.033
+      
+      ctx.font = `bold ${baseFontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      ctx.fillText('Puntos: ' + score + '/50', leftMargin, topPosition);
+      ctx.font = `bold ${smallFontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      ctx.fillText('Estrellas: ' + starPoints, leftMargin, topPosition + baseFontSize * 1.2);
+      ctx.fillText('Mejor: ' + best, leftMargin, topPosition + baseFontSize * 2.4);
+      ctx.restore();
+    }
+
+    function frame(){
+      t++;
+      physics();
+
+      ctx.clearRect(0,0,W,H);
+      drawBackground();
+      for(const p of pipes){ drawPipeColumn(p); }
+      for(const s of stars){ drawStar(s); }
+      drawHero();
+      drawParticles();
+      drawHUD();
+
+      requestAnimationFrame(frame);
+    }
+
+    initHero(); // Initialize hero position and size
+    reset();
+    requestAnimationFrame(frame);
+</script>
+<audio id="starSound" src="assets/star.wav" preload="auto"></audio>
+</body>
+</html>
