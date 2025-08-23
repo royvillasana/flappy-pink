@@ -537,15 +537,32 @@
             gameWon = true;
             playVictory();
             message("🌈 ¡GANASTE! ¡50 PUNTOS! ¡ERES INCREÍBLE! 🌈");
-            // Add rainbow effect
-            for (let i=0;i<20;i++){
+            
+            // Add massive confetti explosion
+            for (let i=0;i<100;i++){
               particles.push({
                 x: Math.random()*W, 
                 y: Math.random()*H, 
-                vx:(Math.random()-0.5)*4, 
-                vy:-Math.random()*3-2, 
-                life:80, 
-                color: `hsl(${Math.random()*360}, 100%, 60%)`
+                vx:(Math.random()-0.5)*8, 
+                vy:-Math.random()*6-2, 
+                life:120, 
+                color: `hsl(${Math.random()*360}, 100%, ${50 + Math.random()*30}%)`,
+                size: Math.random() * 8 + 4,
+                type: Math.random() < 0.3 ? 'circle' : 'square'
+              });
+            }
+            
+            // Add sparkle confetti
+            for (let i=0;i<50;i++){
+              particles.push({
+                x: Math.random()*W, 
+                y: Math.random()*H, 
+                vx:(Math.random()-0.5)*6, 
+                vy:-Math.random()*4-1, 
+                life:100, 
+                color: '#FFD700',
+                size: Math.random() * 4 + 2,
+                type: 'star'
               });
             }
             return;
@@ -607,26 +624,95 @@
       ctx.save();
       particles = particles.filter(p => --p.life > 0);
       for(const p of particles){
-        p.x += p.vx; p.y += p.vy;
-        ctx.globalAlpha = Math.max(0, p.life/(p.color ? 80 : 40));
+        p.x += p.vx; 
+        p.y += p.vy;
+        p.vy += 0.1; // Add slight gravity to particles
+        
+        const maxLife = p.size ? 120 : (p.color ? 80 : 40);
+        ctx.globalAlpha = Math.max(0, p.life/maxLife);
         
         if (p.color) {
-          // Colored particles (victory rainbow or star yellow)
           ctx.fillStyle = p.color;
-          if (p.color === '#FFD700') {
-            // Star particles - draw small stars
+          const size = p.size || 3;
+          
+          if (p.type === 'star' || p.color === '#FFD700') {
+            // Star particles
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            const spikes = 5;
+            const outerRadius = size;
+            const innerRadius = size * 0.5;
+            
+            for (let i = 0; i < spikes * 2; i++) {
+              const angle = (i * Math.PI) / spikes;
+              const radius = i % 2 === 0 ? outerRadius : innerRadius;
+              const x = p.x + Math.cos(angle) * radius;
+              const y = p.y + Math.sin(angle) * radius;
+              
+              if (i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+          } else if (p.type === 'circle') {
+            // Circle confetti
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
             ctx.fill();
           } else {
-            // Rainbow particles for victory
-            ctx.fillRect(p.x-5, p.y-5, 10, 10);
+            // Square confetti (default)
+            const halfSize = size / 2;
+            ctx.fillRect(p.x - halfSize, p.y - halfSize, size, size);
           }
         } else if (isReady(sparkleImg)) {
           // Regular sparkle particles
           ctx.drawImage(sparkleImg, p.x-10, p.y-10, 20, 20);
         }
       }
+      ctx.restore();
+    }
+
+    function drawVictoryScreen(){
+      if (!gameWon) return;
+      
+      ctx.save();
+      
+      // Semi-transparent overlay
+      ctx.fillStyle = 'rgba(255, 182, 233, 0.95)';
+      ctx.fillRect(0, 0, W, H);
+      
+      // Draw large hero image in center
+      if (isReady(heroImg)) {
+        const heroSize = Math.min(W, H) * 0.4;
+        const heroX = W / 2 - heroSize / 2;
+        const heroY = H / 2 - heroSize / 2 - 50;
+        
+        // Add glow effect around hero
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 30;
+        ctx.drawImage(heroImg, heroX, heroY, heroSize, heroSize);
+        ctx.shadowBlur = 0;
+      }
+      
+      // Victory text
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#e60073';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      
+      const titleSize = Math.min(W, H) * 0.08;
+      ctx.font = `bold ${titleSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      ctx.strokeText('¡GANASTE!', W/2, H/2 + 100);
+      ctx.fillText('¡GANASTE!', W/2, H/2 + 100);
+      
+      const subtitleSize = Math.min(W, H) * 0.04;
+      ctx.font = `bold ${subtitleSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      ctx.strokeText('¡50 PUNTOS! ¡ERES INCREÍBLE!', W/2, H/2 + 140);
+      ctx.fillText('¡50 PUNTOS! ¡ERES INCREÍBLE!', W/2, H/2 + 140);
+      
+      ctx.fillText('🌈✨ ¡FELICIDADES! ✨🌈', W/2, H/2 + 180);
+      
+      // Reset text alignment
+      ctx.textAlign = 'left';
       ctx.restore();
     }
 
@@ -666,6 +752,9 @@
       drawHero();
       drawParticles();
       drawHUD();
+      
+      // Draw victory screen on top of everything
+      drawVictoryScreen();
 
       requestAnimationFrame(frame);
     }
