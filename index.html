@@ -382,7 +382,7 @@
       const scaledWidth = bgImg.width * scale;
       const scaledHeight = bgImg.height * scale;
       
-      ctx.globalAlpha = 0.6; // Reduced opacity by 40%
+      ctx.globalAlpha = 0.25; // Very subtle background for better gameplay visibility
       
       // Smooth horizontal scrolling
       backgroundX -= 0.5; // Slow scroll speed
@@ -438,9 +438,41 @@
     }
 
     function drawStar(s){
-      if (!isReady(starImg)) return;
       const size = s.r * 2.5; // Proportional size based on radius
-      ctx.drawImage(starImg, s.x - size/2, s.y - size/2, size, size);
+      
+      // Draw yellow star shape
+      ctx.save();
+      ctx.fillStyle = '#FFD700'; // Gold/Yellow color
+      ctx.strokeStyle = '#FFA500'; // Orange outline
+      ctx.lineWidth = 2;
+      
+      // Draw star shape
+      ctx.beginPath();
+      const spikes = 5;
+      const outerRadius = size / 2;
+      const innerRadius = outerRadius * 0.4;
+      
+      for (let i = 0; i < spikes * 2; i++) {
+        const angle = (i * Math.PI) / spikes - Math.PI / 2;
+        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+        const x = s.x + Math.cos(angle) * radius;
+        const y = s.y + Math.sin(angle) * radius;
+        
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      
+      // Add sparkle effect
+      ctx.fillStyle = '#FFFF99'; // Light yellow
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, size * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
     }
 
     function physics(){
@@ -541,7 +573,7 @@
           
           message(` ¡Brillas! Estrellas: ${starPoints}`);
           for (let i=0;i<5;i++){
-            particles.push({x:s.x, y:s.y, vx:(Math.random()-0.5)*2, vy:-Math.random()*2-1, life:40});
+            particles.push({x:s.x, y:s.y, vx:(Math.random()-0.5)*2, vy:-Math.random()*2-1, life:40, color: '#FFD700'});
           }
         } else kept.push(s);
       }
@@ -563,9 +595,17 @@
         ctx.globalAlpha = Math.max(0, p.life/(p.color ? 80 : 40));
         
         if (p.color) {
-          // Rainbow particles for victory
+          // Colored particles (victory rainbow or star yellow)
           ctx.fillStyle = p.color;
-          ctx.fillRect(p.x-5, p.y-5, 10, 10);
+          if (p.color === '#FFD700') {
+            // Star particles - draw small stars
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // Rainbow particles for victory
+            ctx.fillRect(p.x-5, p.y-5, 10, 10);
+          }
         } else if (isReady(sparkleImg)) {
           // Regular sparkle particles
           ctx.drawImage(sparkleImg, p.x-10, p.y-10, 20, 20);
