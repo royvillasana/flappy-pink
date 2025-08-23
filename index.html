@@ -411,7 +411,23 @@
     function drawHero(){
       if (!isReady(heroImg)) return;
       const size = hero.r * 2.5; // Proportional size based on collision radius
-      ctx.drawImage(heroImg, hero.x - size/2, hero.y - size/2, size, size);
+      
+      ctx.save();
+      
+      // Calculate rotation based on vertical velocity
+      // When falling (positive vy), rotate slightly downward
+      // When jumping (negative vy), rotate slightly upward
+      const maxRotation = Math.PI / 6; // 30 degrees max
+      const rotation = Math.max(-maxRotation, Math.min(maxRotation, hero.vy * 0.15));
+      
+      // Translate to hero position and rotate
+      ctx.translate(hero.x, hero.y);
+      ctx.rotate(rotation);
+      
+      // Draw hero centered at origin (since we translated)
+      ctx.drawImage(heroImg, -size/2, -size/2, size, size);
+      
+      ctx.restore();
     }
 
     function drawPipeColumn(p){
@@ -424,13 +440,32 @@
       // bottom rect
       roundRect(ctx, p.x, p.bottom, p.w, H - p.bottom, 20);
       ctx.fill();
-      // stamp some hearts
+      
+      // stamp hearts centered vertically in each section
       if (isReady(heartImg)){
-        for(let y=8; y<p.top-24; y+=24){
-          ctx.drawImage(heartImg, p.x+8, y, 24, 24);
+        const heartSize = 20;
+        const heartCenterX = p.x + p.w / 2 - heartSize / 2;
+        
+        // Hearts in top section
+        const topSectionHeight = p.top;
+        const topHeartSpacing = Math.min(30, topSectionHeight / Math.floor(topSectionHeight / 30));
+        const topStartY = (topSectionHeight % topHeartSpacing) / 2;
+        
+        for(let y = topStartY; y < p.top - heartSize; y += topHeartSpacing){
+          if (y + heartSize <= p.top) {
+            ctx.drawImage(heartImg, heartCenterX, y, heartSize, heartSize);
+          }
         }
-        for(let y=p.bottom+8; y<H-24; y+=24){
-          ctx.drawImage(heartImg, p.x+8, y, 24, 24);
+        
+        // Hearts in bottom section  
+        const bottomSectionHeight = H - p.bottom;
+        const bottomHeartSpacing = Math.min(30, bottomSectionHeight / Math.floor(bottomSectionHeight / 30));
+        const bottomStartY = p.bottom + (bottomSectionHeight % bottomHeartSpacing) / 2;
+        
+        for(let y = bottomStartY; y < H - heartSize; y += bottomHeartSpacing){
+          if (y >= p.bottom && y + heartSize <= H) {
+            ctx.drawImage(heartImg, heartCenterX, y, heartSize, heartSize);
+          }
         }
       }
       ctx.restore();
