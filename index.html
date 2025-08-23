@@ -163,18 +163,33 @@
     // Resize on window resize
     window.addEventListener('resize', resizeCanvas);
 
-    // Load assets
-    const bgImg = new Image(); bgImg.src = 'assets/background.png';
+    // Load assets with error handling
+    const bgImg = new Image(); 
+    bgImg.src = 'assets/background1.png';
+    bgImg.onerror = () => console.log('Background image failed to load, using fallback');
+    
     const heroImg = new Image(); heroImg.src = 'assets/hero.png';
+    heroImg.onerror = () => console.error('Hero image failed to load');
+    
     const heartImg = new Image(); heartImg.src = 'assets/heart.png';
+    heartImg.onerror = () => console.error('Heart image failed to load');
+    
     const starImg = new Image(); starImg.src = 'assets/star.png';
+    starImg.onerror = () => console.error('Star image failed to load');
+    
     const sparkleImg = new Image(); sparkleImg.src = 'assets/sparkle.png';
+    sparkleImg.onerror = () => console.error('Sparkle image failed to load');
     
 
-    // Audio
+    // Audio with error handling
     const starSfx = new Audio('assets/star.wav');
+    starSfx.onerror = () => console.warn('Star audio failed to load');
+    
     const victorySfx = new Audio('assets/victory.wav');
+    victorySfx.onerror = () => console.warn('Victory audio failed to load');
+    
     const hurtSfx = new Audio('assets/star.wav');
+    hurtSfx.onerror = () => console.warn('Hurt audio failed to load');
     
     // Create audio context for pitch shifting hurt sound
     let audioContext;
@@ -220,12 +235,14 @@
     
     function unlockAudio(){ 
       try { 
-        starSfx.play(); starSfx.pause();
+        starSfx.play().then(() => starSfx.pause()).catch(e => {});
         // Initialize audio context
-        if (!audioContext) {
+        if (!audioContext && (window.AudioContext || window.webkitAudioContext)) {
           audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
-      } catch(e){} 
+      } catch(e){
+        console.warn('Audio initialization failed:', e);
+      } 
     }
 
     const msg = document.getElementById('msg');
