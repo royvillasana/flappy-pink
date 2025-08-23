@@ -338,7 +338,38 @@
     let backgroundX = 0;
     
     function drawBackground(){
-      if (!isReady(bgImg)) return;
+      ctx.save();
+      
+      // Create animated castle background with CSS gradients until image loads
+      if (!isReady(bgImg)) {
+        // Gradient background with castle theme colors
+        const gradient = ctx.createLinearGradient(0, 0, 0, H);
+        gradient.addColorStop(0, '#ff99cc'); // Light pink sky
+        gradient.addColorStop(0.3, '#ffb6e9'); // Pink clouds
+        gradient.addColorStop(0.7, '#ffc1f3'); // Pink hills  
+        gradient.addColorStop(1, '#ffe0f7'); // Light pink ground
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, W, H);
+        
+        // Add some cloud-like shapes
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        for (let i = 0; i < 5; i++) {
+          const x = (backgroundX + i * 150) % (W + 100);
+          const y = H * 0.2 + Math.sin(backgroundX * 0.01 + i) * 20;
+          ctx.beginPath();
+          ctx.arc(x, y, 30, 0, Math.PI * 2);
+          ctx.arc(x + 25, y, 35, 0, Math.PI * 2);
+          ctx.arc(x + 50, y, 30, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        backgroundX -= 0.5;
+        if (backgroundX <= -150) backgroundX = 0;
+        
+        ctx.restore();
+        return;
+      }
       
       const scaleX = W/bgImg.width;
       const scaleY = H/bgImg.height;
@@ -348,7 +379,6 @@
       const scaledWidth = bgImg.width * scale;
       const scaledHeight = bgImg.height * scale;
       
-      ctx.save();
       ctx.globalAlpha = 0.95;
       
       // Smooth horizontal scrolling
