@@ -133,6 +133,9 @@
     
     let W, H;
     
+    // Hero object - declare early to avoid initialization errors
+    const hero = { x: 0, y: 0, r: 0, vy: 0, g: 0.48, jump: -7.2 };
+    
     function resizeCanvas() {
       const container = document.querySelector('.wrap');
       const rect = container.getBoundingClientRect();
@@ -261,7 +264,6 @@
       hero.r = Math.min(W, H) * 0.057; // 24/420 ≈ 0.057 - proportional radius
     }
     
-    const hero = { x: 0, y: 0, r: 0, vy: 0, g: 0.48, jump: -7.2 };
     let pipes = []; // columns with a gap
     let stars = []; // collectibles
     let t = 0;
