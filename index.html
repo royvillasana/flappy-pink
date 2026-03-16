@@ -120,7 +120,7 @@
     let W, H;
     
     // Hero object - declare early to avoid initialization errors
-    const hero = { x: 0, y: 0, r: 0, vy: 0, g: 0.48, jump: -7.2 };
+    const hero = { x: 0, y: 0, r: 0, vy: 0, g: 0.32, jump: -6.0 };
     
     function resizeCanvas() {
       const container = document.querySelector('.wrap');
@@ -277,6 +277,10 @@
     let gameWon = false;
     let gameOver = false;
     let gameStarted = false; // Game hasn't started until first input
+    let idleT = 0;
+    let invincibleFrames = 0;
+    let heroFlashFrames = 0;
+    let pipeTimer = 0;
 
     function reset(){
       pipes = [];
@@ -288,6 +292,9 @@
       gameWon = false;
       gameOver = false;
       gameStarted = false; // Reset game started state
+      invincibleFrames = 0;
+      heroFlashFrames = 0;
+      pipeTimer = 0;
       initHero();
       hero.vy = 0;
       message(" ¡Toca o presiona una tecla para volar! ¡Tú puedes! ");
@@ -424,9 +431,15 @@
       ctx.translate(hero.x, hero.y);
       ctx.rotate(rotation);
       
+      // Flash effect when hit
+      if (heroFlashFrames > 0) {
+        heroFlashFrames--;
+        if (Math.floor(heroFlashFrames / 5) % 2 === 0) ctx.globalAlpha = 0.25;
+      }
+
       // Draw hero centered at origin (since we translated)
       ctx.drawImage(heroImg, -size/2, -size/2, size, size);
-      
+
       ctx.restore();
     }
 
@@ -524,40 +537,38 @@
 
       // Only apply physics if game has started
       if (!gameStarted) {
-        // Keep hero floating in place until first input
+        // Gentle floating animation while waiting
+        hero.y = H * 0.294 + Math.sin(idleT * 0.04) * 8;
         hero.vy = 0;
         return;
       }
 
       // hero
       hero.vy += hero.g;
+      if (hero.vy > 10) hero.vy = 10; // terminal velocity
       hero.y += hero.vy;
       
       // Ground and ceiling collision
-      if (hero.y > H-hero.r){ 
-        hero.y = H-hero.r; 
-        hero.vy = 0;
-        lives -= 0.5;
-        updateHeartsDisplay();
-        playHurt();
-        if (lives <= 0) {
-          gameOver = true;
-          message("¡Se acabaron los corazones! Juego terminado");
-          return;
-        }
-        message(`¡Cuidado! Te quedan ${Math.floor(lives)} corazones`);
+      if (hero.y > H-hero.r){
+        hero.y = H-hero.r;
+        hero.vy = easyMode ? -3 : 0;
+        if (!easyMode) { takeDamage(`¡Cuidado! Te quedan ${Math.floor(lives)} corazones`); }
+        if (gameOver) return;
       }
       if (hero.y < hero.r){ hero.y = hero.r; hero.vy = 0; }
 
-      // spawn pipes only after game starts
-      if (gameStarted && t%95===0) spawnPipe();
+      // spawn pipes with progressive difficulty
+      pipeTimer++;
+      const spawnInterval = Math.max(65, 95 - Math.floor(score / 5) * 5);
+      if (pipeTimer >= spawnInterval) { spawnPipe(); pipeTimer = 0; }
 
-      // move pipes
-      for(const p of pipes){ p.x -= 2.4; }
+      // move pipes with progressive speed
+      const pipeSpeed = Math.min(2.4 + score * 0.05, 4.5);
+      for(const p of pipes){ p.x -= pipeSpeed; }
       if (pipes.length && pipes[0].x + pipes[0].w < -10) pipes.shift();
 
       // move stars
-      for(const s of stars){ s.x -= 2.4; }
+      for(const s of stars){ s.x -= pipeSpeed; }
       if (stars.length && stars[0].x < -20) stars.shift();
 
       // collisions & scoring
@@ -609,18 +620,13 @@
         const hitsTop = hero.y-hero.r+4 < p.top && withinX;
         const hitsBottom = hero.y+hero.r-4 > p.bottom && withinX;
         if ((hitsTop || hitsBottom) && !p.hit){
-          p.hit = true; // Prevent multiple hits on same pipe
-          lives -= 0.5;
-          updateHeartsDisplay();
-          playHurt();
-          hero.vy = -6; // Small bounce
-          
-          if (lives <= 0) {
-            gameOver = true;
-            message("¡Se acabaron los corazones! Juego terminado");
-            return;
+          p.hit = true;
+          if (easyMode) {
+            gentleBump();
           } else {
-            message(`¡Auch! Te quedan ${Math.floor(lives)} corazones`);
+            hero.vy = -5;
+            takeDamage(`¡Auch! Te quedan ${Math.floor(lives)} corazones`);
+            if (gameOver) return;
           }
         }
       }
@@ -646,11 +652,29 @@
         } else kept.push(s);
       }
       stars = kept;
+
+      // Tick down invincibility
+      if (invincibleFrames > 0) invincibleFrames--;
     }
 
     function gentleBump(){
-      hero.vy = -6;
+      hero.vy = -5;
       message(" ¡No pasa nada! ¡Inténtalo otra vez, tú puedes!");
+    }
+
+    function takeDamage(msg_text) {
+      if (invincibleFrames > 0) return;
+      lives -= 0.5;
+      updateHeartsDisplay();
+      playHurt();
+      heroFlashFrames = 40;
+      invincibleFrames = 90;
+      if (lives <= 0) {
+        gameOver = true;
+        message("¡Se acabaron los corazones! Juego terminado");
+      } else {
+        message(msg_text);
+      }
     }
 
     // particles
@@ -774,6 +798,7 @@
     }
 
     function frame(){
+      idleT++;
       // Only increment time when game has started
       if (gameStarted) {
         t++;
